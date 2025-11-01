@@ -1,47 +1,131 @@
+let audioContext;
+let accentBuffer, beatBuffer;
+let currentBeat = 0;
 let isPlaying = false;
-let bpm = 100;
-let intervalId;
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let timer;
+let bpm = 120;
+let beats = 4;
+let noteValue = 4;
 
-const bpmSlider = document.getElementById("bpm");
-const bpmValue = document.getElementById("bpmValue");
-const toggleBtn = document.getElementById("toggle");
+const bpmInput = document.getElementById("bpm");
+const beatsInput = document.getElementById("beats");
+const noteValueInput = document.getElementById("noteValue");
+const startStopBtn = document.getElementById("startStopBtn");
+const statusText = document.getElementById("statusText");
+const ballsContainer = document.getElementById("ballsContainer");
 
-bpmSlider.addEventListener("input", () => {
-    bpm = bpmSlider.value;
-    bpmValue.textContent = bpm;
-    if (isPlaying) startMetronome(); // обновляем интервал, если уже играет
-});
+function updateStatus() {
+    statusText.textContent = isPlaying
+        ? `Playing ${beats}/${noteValue} at ${bpm} BPM`
+        : "Stopped";
+}
 
-toggleBtn.addEventListener("click", () => {
-    isPlaying = !isPlaying;
-    if (isPlaying) {
-        toggleBtn.textContent = "Stop";
-        startMetronome();
-    } else {
-        toggleBtn.textContent = "Start";
-        stopMetronome();
+function renderBalls() {
+    ballsContainer.innerHTML = "";
+    for (let i = 0; i < beats; i++) {
+        const ball = document.createElement("div");
+        ball.classList.add("ball");
+        ballsContainer.appendChild(ball);
     }
-});
+}
+
+function highlightBall(index) {
+    document.querySelectorAll(".ball").forEach((b, i) => {
+        b.classList.toggle("active", i === index);
+    });
+}
+
+async function loadSound(url) {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    return audioContext.decodeAudioData(arrayBuffer);
+}
+
+async function initSounds() {
+    if (!audioContext)
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    accentBuffer = await loadSound("accent-sound.wav");
+    beatBuffer = await loadSound("beat-sound.ogg");
+}
+
+function playSound(buffer) {
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+}
 
 function playClick() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.frequency.value = 1000;
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.05);
+    if (currentBeat === 0) playSound(accentBuffer);
+    else playSound(beatBuffer);
+    highlightBall(currentBeat);
+    currentBeat = (currentBeat + 1) % beats;
 }
 
 function startMetronome() {
-    stopMetronome(); // чтобы не наслаивались интервалы
-    const interval = 60000 / bpm;
-    playClick();
-    intervalId = setInterval(playClick, interval);
+    stopMetronome();
+    bpm = parseInt(bpmInput.value) || 120;
+    beats = parseInt(beatsInput.value) || 4;
+    noteValue = parseInt(noteValueInput.value) || 4;
+
+    bpm = Math.min(Math.max(bpm, 1), 1000);
+    beats = Math.min(Math.max(beats, 1), 12);
+    noteValue = Math.min(Math.max(noteValue, 1), 12);
+
+    bpmInput.value = bpm;
+    beatsInput.value = beats;
+    noteValueInput.value = noteValue;
+
+    currentBeat = 0;
+    renderBalls();
+    highlightBall(currentBeat);
+
+    const interval = (60 / bpm) * 1000;
+    timer = setInterval(playClick, interval);
+    isPlaying = true;
+    startStopBtn.textContent = "Stop";
+    updateStatus();
 }
 
 function stopMetronome() {
-    clearInterval(intervalId);
+    clearInterval(timer);
+    isPlaying = false;
+    startStopBtn.textContent = "Start";
+    highlightBall(-1);
+    updateStatus();
 }
+
+function toggleMetronome() {
+    if (isPlaying) stopMetronome();
+    else {
+        if (!audioContext) initSounds().then(startMetronome);
+        else startMetronome();
+    }
+}
+
+startStopBtn.addEventListener("click", toggleMetronome);
+
+[bpmInput, beatsInput, noteValueInput].forEach((input) => {
+    input.addEventListener("input", () => {
+        if (!input.value) return;
+        let val = parseInt(input.value);
+        if (isNaN(val)) return;
+
+        const min = parseInt(input.min);
+        const max = parseInt(input.max);
+        if (val < min) val = min;
+        if (val > max) val = max;
+        input.value = val;
+
+        bpm = parseInt(bpmInput.value) || bpm;
+        beats = parseInt(beatsInput.value) || beats;
+        noteValue = parseInt(noteValueInput.value) || noteValue;
+
+        updateStatus();
+        if (isPlaying) startMetronome();
+        else renderBalls();
+    });
+});
+
+renderBalls();
+updateStatus();
