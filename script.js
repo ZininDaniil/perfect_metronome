@@ -6,21 +6,22 @@ let nextNoteTime = 0;
 let bpm = 120;
 let beats = 4;
 let noteValue = 4;
+let tripletMode = false;
 
 const lookahead = 25.0; // ms
 const scheduleAheadTime = 0.1; // sec
 
 const bpmInput = document.getElementById("bpm");
 const beatsInput = document.getElementById("beats");
-const noteValueInput = document.getElementById("noteValue");
 const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
 const noteButtons = document.querySelectorAll(".note-btn");
+const tripletBtn = document.getElementById("tripletBtn");
 
 function updateStatus() {
     statusText.textContent = isPlaying
-        ? `Playing ${beats}/${noteValue} at ${bpm} BPM`
+        ? `Playing ${beats}/${noteValue} at ${bpm} BPM ${tripletMode ? "(Triplets)" : ""}`
         : "Stopped";
 }
 
@@ -61,14 +62,26 @@ function playSound(buffer, time) {
 
 function scheduleNote() {
     if (!audioContext) return;
-    const secondsPerBeat = (60 / bpm) * (4 / noteValue);
 
-    if (currentBeat === 0) playSound(accentBuffer, nextNoteTime);
-    else playSound(beatBuffer, nextNoteTime);
+    let secondsPerBeat = (60 / bpm) * (4 / noteValue);
 
-    highlightBall(currentBeat);
-    currentBeat = (currentBeat + 1) % beats;
-    nextNoteTime += secondsPerBeat;
+    if (tripletMode) {
+        const tripletTime = secondsPerBeat / 3;
+        for (let i = 0; i < 3; i++) {
+            const buffer = (i === 0 && currentBeat === 0) ? accentBuffer : beatBuffer;
+            playSound(buffer, nextNoteTime + i * tripletTime);
+        }
+        nextNoteTime += secondsPerBeat;
+        highlightBall(currentBeat);
+        currentBeat = (currentBeat + 1) % beats;
+    } else {
+        if (currentBeat === 0) playSound(accentBuffer, nextNoteTime);
+        else playSound(beatBuffer, nextNoteTime);
+
+        highlightBall(currentBeat);
+        currentBeat = (currentBeat + 1) % beats;
+        nextNoteTime += secondsPerBeat;
+    }
 }
 
 function scheduler() {
@@ -152,6 +165,14 @@ document.querySelectorAll(".inc, .dec").forEach(btn => {
         currentBeat = 0;
         nextNoteTime = audioContext.currentTime + 0.05;
     });
+});
+
+// Triplet toggle
+tripletBtn.addEventListener("click", () => {
+    tripletMode = !tripletMode;
+    tripletBtn.classList.toggle("active", tripletMode);
+    tripletBtn.textContent = tripletMode ? "On" : "Off";
+    updateStatus();
 });
 
 renderBalls();

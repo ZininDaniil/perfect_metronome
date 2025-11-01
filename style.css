@@ -45,6 +45,7 @@ label {
     display: flex;
     align-items: center;
     gap: 5px;
+    flex-wrap: wrap;
 }
 
 input {
@@ -56,6 +57,7 @@ input {
     font-size: 1em;
 }
 
+/* Вертикальные ▲1/▼1 кнопки */
 .vertical-buttons {
     display: flex;
     flex-direction: column;
@@ -64,23 +66,57 @@ input {
 
 .vertical-buttons button {
     font-size: 0.8em;
-    padding: 2px 5px;
+    padding: 3px 6px;
+    border-radius: 5px;
+    border: 1px solid #c9b89a;
+    background-color: #e2d8c5;
+    color: #3b2f1e;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
+.vertical-buttons button:hover {
+    background-color: #d3c2a2;
+}
+
+/* Быстрые кнопки +5 +10 */
 .quick-buttons {
     display: flex;
     gap: 2px;
     margin-left: 5px;
+    flex-wrap: wrap;
 }
 
 .quick-buttons button {
     font-size: 0.8em;
-    padding: 2px 5px;
+    padding: 3px 6px;
+    border-radius: 5px;
+    border: 1px solid #c9b89a;
+    background-color: #e2d8c5;
+    color: #3b2f1e;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
+.quick-buttons button:hover {
+    background-color: #d3c2a2;
+}
+
+/* Note Value buttons */
 .note-buttons {
     display: flex;
     gap: 5px;
+}
+
+.note-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #c9b89a;
+    background-color: #e2d8c5;
+    color: #3b2f1e;
+    cursor: pointer;
+    font-size: 1em;
+    transition: 0.2s;
 }
 
 .note-btn.active {
@@ -88,7 +124,12 @@ input {
     color: white;
 }
 
-button {
+.note-btn:hover {
+    background-color: #d3c2a2;
+}
+
+/* Start/Stop & Triplet buttons */
+button.start-stop-btn {
     margin-top: 10px;
     background-color: #6b4f2d;
     color: white;
@@ -100,7 +141,11 @@ button {
     font-size: 1em;
 }
 
-button:hover {
+button.start-stop-btn.active {
+    background-color: #8b6536;
+}
+
+button.start-stop-btn:hover {
     background-color: #8b6536;
 }
 

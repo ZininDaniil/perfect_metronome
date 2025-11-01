@@ -39,12 +39,6 @@
                     <button class="inc" data-target="beats" data-step="1">▲1</button>
                     <button class="dec" data-target="beats" data-step="1">▼1</button>
                 </div>
-                <div class="quick-buttons">
-                    <button class="inc" data-target="beats" data-step="5">+5</button>
-                    <button class="dec" data-target="beats" data-step="5">-5</button>
-                    <button class="inc" data-target="beats" data-step="10">+10</button>
-                    <button class="dec" data-target="beats" data-step="10">-10</button>
-                </div>
             </div>
         </div>
 
@@ -59,7 +53,13 @@
             </div>
         </div>
 
-        <button id="startStopBtn">Start</button>
+        <!-- Triplet Mode Toggle -->
+        <div class="control-group">
+            <label>Triplets:</label>
+            <button id="tripletBtn" class="start-stop-btn">Off</button>
+        </div>
+
+        <button id="startStopBtn" class="start-stop-btn">Start</button>
     </div>
 
     <div class="status" id="statusText">Stopped</div>
