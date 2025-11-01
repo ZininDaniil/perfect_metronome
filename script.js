@@ -1,5 +1,9 @@
-let audioContext;
-let accentBuffer, beatBuffer;
+let accentAudio = new Audio("accent-sound.wav");
+let beatAudio = new Audio("beat-sound.ogg");
+
+accentAudio.preload = "auto";
+beatAudio.preload = "auto";
+
 let currentBeat = 0;
 let isPlaying = false;
 let timer;
@@ -14,14 +18,12 @@ const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
 
-// Обновление текста статуса
 function updateStatus() {
     statusText.textContent = isPlaying
         ? `Playing ${beats}/${noteValue} at ${bpm} BPM`
         : "Stopped";
 }
 
-// Рендер шариков
 function renderBalls() {
     ballsContainer.innerHTML = "";
     for (let i = 0; i < beats; i++) {
@@ -31,56 +33,21 @@ function renderBalls() {
     }
 }
 
-// Подсветка текущего удара
 function highlightBall(index) {
     document.querySelectorAll(".ball").forEach((b, i) => {
         b.classList.toggle("active", i === index);
     });
 }
 
-// Загрузка звуков
-async function loadSound(url) {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    return audioContext.decodeAudioData(arrayBuffer);
-}
-
-// Инициализация звуков
-async function initSounds() {
-    if (!audioContext)
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-    // Для iOS: разблокировка контекста
-    if (audioContext.state === 'suspended') await audioContext.resume();
-
-    accentBuffer = await loadSound("accent-sound.wav");
-    beatBuffer = await loadSound("beat-sound.ogg");
-
-    // Короткий silent buffer, чтобы гарантировать звук на встроенных динамиках iOS
-    const silentBuffer = audioContext.createBuffer(1, 1, 22050);
-    const silentSource = audioContext.createBufferSource();
-    silentSource.buffer = silentBuffer;
-    silentSource.connect(audioContext.destination);
-    silentSource.start();
-}
-
-// Воспроизведение звука
-function playSound(buffer) {
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    source.start();
-}
-
-// Метрономный клик
 function playClick() {
-    if (currentBeat === 0) playSound(accentBuffer);
-    else playSound(beatBuffer);
+    // Используем cloneNode, чтобы звук мог проигрываться без блокировки
+    const sound = (currentBeat === 0 ? accentAudio : beatAudio).cloneNode();
+    sound.play().catch(() => { /* игнорируем ошибки iOS autoplay */ });
+
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
 }
 
-// Старт метронома
 function startMetronome() {
     stopMetronome();
 
@@ -107,7 +74,6 @@ function startMetronome() {
     updateStatus();
 }
 
-// Стоп метронома
 function stopMetronome() {
     clearInterval(timer);
     isPlaying = false;
@@ -116,17 +82,13 @@ function stopMetronome() {
     updateStatus();
 }
 
-// Переключение старт/стоп
-startStopBtn.addEventListener("click", async () => {
-    if (!audioContext) await initSounds();
+startStopBtn.addEventListener("click", () => {
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
-// Динамическое обновление при вводе значений
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
-        // Если поле пустое, не меняем звук
         if (!input.value) return;
 
         let val = parseInt(input.value);
