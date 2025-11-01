@@ -1,5 +1,3 @@
-let audioContext;
-let accentBuffer, beatBuffer;
 let currentBeat = 0;
 let isPlaying = false;
 let timer;
@@ -7,6 +5,7 @@ let bpm = 120;
 let beats = 4;
 let noteValue = 4;
 
+// HTML элементы
 const bpmInput = document.getElementById("bpm");
 const beatsInput = document.getElementById("beats");
 const noteValueInput = document.getElementById("noteValue");
@@ -14,12 +13,18 @@ const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
 
+// Audio элементы
+const accentAudio = new Audio("accent-sound.wav");
+const beatAudio = new Audio("beat-sound.ogg");
+
+// Обновление текста статуса
 function updateStatus() {
     statusText.textContent = isPlaying
         ? `Playing ${beats}/${noteValue} at ${bpm} BPM`
         : "Stopped";
 }
 
+// Отрисовка шариков
 function renderBalls() {
     ballsContainer.innerHTML = "";
     for (let i = 0; i < beats; i++) {
@@ -29,49 +34,28 @@ function renderBalls() {
     }
 }
 
+// Подсветка текущего шара
 function highlightBall(index) {
     document.querySelectorAll(".ball").forEach((b, i) => {
         b.classList.toggle("active", i === index);
     });
 }
 
-async function loadSound(url) {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    return audioContext.decodeAudioData(arrayBuffer);
-}
-
-// ⚡ Инициализация звука с "разогревом" для iPhone динамиков
-async function initSounds() {
-    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-    // маленький пустой буфер для разблокировки встроенных динамиков на iOS
-    const unlockBuffer = audioContext.createBuffer(1, 1, 22050);
-    const source = audioContext.createBufferSource();
-    source.buffer = unlockBuffer;
-    source.connect(audioContext.destination);
-    source.start(0);
-
-    accentBuffer = await loadSound("accent-sound.wav");
-    beatBuffer = await loadSound("beat-sound.ogg");
-}
-
-function playSound(buffer) {
-    if (!audioContext) return; // дополнительная защита
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    source.start(0);
-}
-
+// Воспроизведение звука
 function playClick() {
-    if (currentBeat === 0) playSound(accentBuffer);
-    else playSound(beatBuffer);
+    if (currentBeat === 0) {
+        accentAudio.currentTime = 0;
+        accentAudio.play();
+    } else {
+        beatAudio.currentTime = 0;
+        beatAudio.play();
+    }
 
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
 }
 
+// Запуск метронома
 function startMetronome() {
     stopMetronome();
 
@@ -99,6 +83,7 @@ function startMetronome() {
     updateStatus();
 }
 
+// Остановка метронома
 function stopMetronome() {
     clearInterval(timer);
     isPlaying = false;
@@ -107,17 +92,16 @@ function stopMetronome() {
     updateStatus();
 }
 
-// ⚡ Клик по кнопке Start/Stop с инициализацией звуков для iOS
-startStopBtn.addEventListener("click", async () => {
-    if (!audioContext) await initSounds();
+// Кнопка старт/стоп
+startStopBtn.addEventListener("click", () => {
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
-// Динамическое обновление значений BPM и Time Signature
+// Динамическое обновление значений и шариков
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
-        if (!input.value) return; // если пустое, не меняем звук
+        if (!input.value) return; // пустое поле — не менять
         let val = parseInt(input.value);
         if (isNaN(val)) return;
 
@@ -133,11 +117,12 @@ startStopBtn.addEventListener("click", async () => {
 
         updateStatus();
 
-        // перезапуск интервала для динамического изменения скорости
+        // Перезапуск интервала для динамического изменения скорости
         if (isPlaying) startMetronome();
         else renderBalls();
     });
 });
 
+// Начальная отрисовка
 renderBalls();
 updateStatus();
