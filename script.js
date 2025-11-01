@@ -2,10 +2,14 @@ let audioContext;
 let accentBuffer, beatBuffer;
 let currentBeat = 0;
 let isPlaying = false;
-let timer;
+let schedulerInterval;
+let nextNoteTime = 0;
 let bpm = 120;
 let beats = 4;
 let noteValue = 4;
+
+const lookahead = 25.0; // ms
+const scheduleAheadTime = 0.1; // sec
 
 const bpmInput = document.getElementById("bpm");
 const beatsInput = document.getElementById("beats");
@@ -14,14 +18,12 @@ const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
 
-// Обновление текста статуса
 function updateStatus() {
     statusText.textContent = isPlaying
         ? `Playing ${beats}/${noteValue} at ${bpm} BPM`
         : "Stopped";
 }
 
-// Рендер шариков
 function renderBalls() {
     ballsContainer.innerHTML = "";
     for (let i = 0; i < beats; i++) {
@@ -31,53 +33,55 @@ function renderBalls() {
     }
 }
 
-// Подсветка текущего удара
 function highlightBall(index) {
     document.querySelectorAll(".ball").forEach((b, i) => {
         b.classList.toggle("active", i === index);
     });
 }
 
-// Загрузка звука
 async function loadSound(url) {
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
     return audioContext.decodeAudioData(arrayBuffer);
 }
 
-// Инициализация звуков и AudioContext при первом клике
 async function initSounds() {
-    if (!audioContext) {
+    if (!audioContext)
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
     if (!accentBuffer) accentBuffer = await loadSound("accent-sound.wav");
     if (!beatBuffer) beatBuffer = await loadSound("beat-sound.ogg");
 }
 
-// Воспроизведение одного удара
-function playSound(buffer) {
+function playSound(buffer, time) {
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
-    source.start();
+    source.start(time);
 }
 
-// Один клик метронома
-function playClick() {
+function scheduleNote() {
+    const secondsPerBeat = 60 / bpm;
     if (!audioContext) return;
-    if (currentBeat === 0) playSound(accentBuffer);
-    else playSound(beatBuffer);
+    if (currentBeat % beats === 0) playSound(accentBuffer, nextNoteTime);
+    else playSound(beatBuffer, nextNoteTime);
+
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
+    nextNoteTime += secondsPerBeat;
 }
 
-// Старт метронома
-function startMetronome() {
-    stopMetronome();
+function scheduler() {
+    while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
+        scheduleNote();
+    }
+}
 
-    bpm = parseInt(bpmInput.value) || bpm;
-    beats = parseInt(beatsInput.value) || beats;
-    noteValue = parseInt(noteValueInput.value) || noteValue;
+async function startMetronome() {
+    await initSounds();
+    stopMetronome();
+    bpm = parseInt(bpmInput.value) || 120;
+    beats = parseInt(beatsInput.value) || 4;
+    noteValue = parseInt(noteValueInput.value) || 4;
 
     bpm = Math.min(Math.max(bpm, 1), 1000);
     beats = Math.min(Math.max(beats, 1), 12);
@@ -91,41 +95,35 @@ function startMetronome() {
     renderBalls();
     highlightBall(currentBeat);
 
-    const interval = (60 / bpm) * 1000;
-    timer = setInterval(playClick, interval);
+    nextNoteTime = audioContext.currentTime + 0.05;
+    schedulerInterval = setInterval(scheduler, lookahead);
     isPlaying = true;
     startStopBtn.textContent = "Stop";
     updateStatus();
 }
 
-// Стоп метронома
 function stopMetronome() {
-    clearInterval(timer);
+    clearInterval(schedulerInterval);
     isPlaying = false;
     startStopBtn.textContent = "Start";
     highlightBall(-1);
     updateStatus();
 }
 
-// Toggle кнопка
 startStopBtn.addEventListener("click", async () => {
-    if (!audioContext || !accentBuffer || !beatBuffer) {
-        await initSounds(); // гарантируем разрешение звука на iOS
-    }
+    if (!audioContext || !accentBuffer || !beatBuffer) await initSounds();
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
-// Обработчики для динамического изменения значений
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
+        if (!input.value) return;
         let val = parseInt(input.value);
-        const min = parseInt(input.min);
-        const max = parseInt(input.max);
-
-        if (!input.value) return; // пустое значение не меняет звук
         if (isNaN(val)) return;
 
+        const min = parseInt(input.min);
+        const max = parseInt(input.max);
         if (val < min) val = min;
         if (val > max) val = max;
         input.value = val;
@@ -134,10 +132,8 @@ startStopBtn.addEventListener("click", async () => {
         beats = parseInt(beatsInput.value) || beats;
         noteValue = parseInt(noteValueInput.value) || noteValue;
 
-        renderBalls(); // обновляем шарики сразу
+        renderBalls();
         updateStatus();
-
-        if (isPlaying) startMetronome(); // пересчитываем интервал
     });
 });
 
