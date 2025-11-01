@@ -41,6 +41,7 @@ async function loadSound(url) {
     return audioContext.decodeAudioData(arrayBuffer);
 }
 
+// ⚡ Инициализация звука только при клике пользователя
 async function initSounds() {
     if (!audioContext)
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -95,15 +96,12 @@ function stopMetronome() {
     updateStatus();
 }
 
-function toggleMetronome() {
+// ⚡ Важное изменение для iOS: создаём AudioContext внутри события клика
+startStopBtn.addEventListener("click", async () => {
+    if (!audioContext) await initSounds();
     if (isPlaying) stopMetronome();
-    else {
-        if (!audioContext) initSounds().then(startMetronome);
-        else startMetronome();
-    }
-}
-
-startStopBtn.addEventListener("click", toggleMetronome);
+    else startMetronome();
+});
 
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
