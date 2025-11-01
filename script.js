@@ -1,15 +1,16 @@
-let accentAudio = new Audio("accent-sound.wav");
-let beatAudio = new Audio("beat-sound.ogg");
-
-accentAudio.preload = "auto";
-beatAudio.preload = "auto";
-
+let audioContext;
+let accentBuffer, beatBuffer;
 let currentBeat = 0;
 let isPlaying = false;
-let timer;
 let bpm = 120;
 let beats = 4;
 let noteValue = 4;
+
+// Таймер планировщика
+let timerId;
+const scheduleAheadTime = 0.1; // секунды
+const lookahead = 25.0;        // миллисекунды
+let nextNoteTime = 0.0;
 
 const bpmInput = document.getElementById("bpm");
 const beatsInput = document.getElementById("beats");
@@ -18,6 +19,7 @@ const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
 
+// ---------------- Status и шарики ----------------
 function updateStatus() {
     statusText.textContent = isPlaying
         ? `Playing ${beats}/${noteValue} at ${bpm} BPM`
@@ -39,21 +41,47 @@ function highlightBall(index) {
     });
 }
 
-function playClick() {
-    // Используем cloneNode, чтобы звук мог проигрываться без блокировки
-    const sound = (currentBeat === 0 ? accentAudio : beatAudio).cloneNode();
-    sound.play().catch(() => { /* игнорируем ошибки iOS autoplay */ });
+// ---------------- Звуки ----------------
+async function loadSound(url) {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    return audioContext.decodeAudioData(arrayBuffer);
+}
+
+async function initSounds() {
+    if (!audioContext)
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    accentBuffer = await loadSound("accent-sound.wav");
+    beatBuffer = await loadSound("beat-sound.ogg");
+}
+
+// ---------------- Планировщик ----------------
+function scheduleClick(time) {
+    const buffer = (currentBeat === 0) ? accentBuffer : beatBuffer;
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(time);
 
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
 }
 
+function scheduler() {
+    while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
+        scheduleClick(nextNoteTime);
+        nextNoteTime += 60.0 / bpm;
+    }
+    timerId = setTimeout(scheduler, lookahead);
+}
+
+// ---------------- Метроном ----------------
 function startMetronome() {
     stopMetronome();
 
-    bpm = parseInt(bpmInput.value) || bpm;
-    beats = parseInt(beatsInput.value) || beats;
-    noteValue = parseInt(noteValueInput.value) || noteValue;
+    bpm = parseInt(bpmInput.value) || 120;
+    beats = parseInt(beatsInput.value) || 4;
+    noteValue = parseInt(noteValueInput.value) || 4;
 
     bpm = Math.min(Math.max(bpm, 1), 1000);
     beats = Math.min(Math.max(beats, 1), 12);
@@ -67,30 +95,33 @@ function startMetronome() {
     renderBalls();
     highlightBall(currentBeat);
 
-    const interval = (60 / bpm) * 1000;
-    timer = setInterval(playClick, interval);
+    nextNoteTime = audioContext.currentTime + 0.05; // небольшая пауза перед стартом
     isPlaying = true;
     startStopBtn.textContent = "Stop";
     updateStatus();
+
+    scheduler();
 }
 
 function stopMetronome() {
-    clearInterval(timer);
+    clearTimeout(timerId);
     isPlaying = false;
     startStopBtn.textContent = "Start";
     highlightBall(-1);
     updateStatus();
 }
 
-startStopBtn.addEventListener("click", () => {
+// ---------------- Toggle ----------------
+startStopBtn.addEventListener("click", async () => {
+    if (!audioContext) await initSounds();
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
+// ---------------- Input handlers ----------------
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
         if (!input.value) return;
-
         let val = parseInt(input.value);
         if (isNaN(val)) return;
 
@@ -104,12 +135,15 @@ startStopBtn.addEventListener("click", () => {
         beats = parseInt(beatsInput.value) || beats;
         noteValue = parseInt(noteValueInput.value) || noteValue;
 
+        renderBalls();
         updateStatus();
-        if (isPlaying) startMetronome();
-        else renderBalls();
+        if (isPlaying) {
+            // перезапускаем планировщик с новым BPM / Time Signature
+            nextNoteTime = audioContext.currentTime + 0.05;
+        }
     });
 });
 
-// Первоначальный рендер
+// ---------------- Инициализация ----------------
 renderBalls();
 updateStatus();
