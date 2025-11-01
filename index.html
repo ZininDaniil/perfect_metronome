@@ -11,26 +11,58 @@
     <h1>Metronome</h1>
 
     <div class="controls">
+
+        <!-- BPM Control -->
         <div class="control-group">
             <label for="bpm">BPM:</label>
-            <input id="bpm" type="number" min="1" max="1000" value="120" />
+            <div class="input-with-buttons">
+                <input id="bpm" type="number" min="1" max="1000" value="120" />
+                <div class="vertical-buttons">
+                    <button class="inc" data-target="bpm" data-step="1">▲1</button>
+                    <button class="dec" data-target="bpm" data-step="1">▼1</button>
+                </div>
+                <div class="quick-buttons">
+                    <button class="inc" data-target="bpm" data-step="5">+5</button>
+                    <button class="dec" data-target="bpm" data-step="5">-5</button>
+                    <button class="inc" data-target="bpm" data-step="10">+10</button>
+                    <button class="dec" data-target="bpm" data-step="10">-10</button>
+                </div>
+            </div>
         </div>
 
+        <!-- Beats Control -->
         <div class="control-group">
             <label for="beats">Beats:</label>
-            <input id="beats" type="number" min="1" max="32" value="4" />
+            <div class="input-with-buttons">
+                <input id="beats" type="number" min="1" max="32" value="4" />
+                <div class="vertical-buttons">
+                    <button class="inc" data-target="beats" data-step="1">▲1</button>
+                    <button class="dec" data-target="beats" data-step="1">▼1</button>
+                </div>
+                <div class="quick-buttons">
+                    <button class="inc" data-target="beats" data-step="5">+5</button>
+                    <button class="dec" data-target="beats" data-step="5">-5</button>
+                    <button class="inc" data-target="beats" data-step="10">+10</button>
+                    <button class="dec" data-target="beats" data-step="10">-10</button>
+                </div>
+            </div>
         </div>
 
+        <!-- Note Value Control -->
         <div class="control-group">
-            <label for="noteValue">Note Value:</label>
-            <input id="noteValue" type="number" min="1" max="32" value="4" />
+            <label>Note Value:</label>
+            <div class="note-buttons">
+                <button class="note-btn" data-value="4">4</button>
+                <button class="note-btn" data-value="8">8</button>
+                <button class="note-btn" data-value="16">16</button>
+                <button class="note-btn" data-value="32">32</button>
+            </div>
         </div>
 
         <button id="startStopBtn">Start</button>
     </div>
 
     <div class="status" id="statusText">Stopped</div>
-
     <div class="balls-container" id="ballsContainer"></div>
 </div>
 

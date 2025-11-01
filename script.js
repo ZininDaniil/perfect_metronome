@@ -1,7 +1,6 @@
 let audioContext;
 let accentBuffer, beatBuffer;
 let currentBeat = 0;
-let isPlaying = false;
 let schedulerInterval;
 let nextNoteTime = 0;
 let bpm = 120;
@@ -17,6 +16,7 @@ const noteValueInput = document.getElementById("noteValue");
 const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
+const noteButtons = document.querySelectorAll(".note-btn");
 
 function updateStatus() {
     statusText.textContent = isPlaying
@@ -60,9 +60,10 @@ function playSound(buffer, time) {
 }
 
 function scheduleNote() {
-    const secondsPerBeat = 60 / bpm;
     if (!audioContext) return;
-    if (currentBeat % beats === 0) playSound(accentBuffer, nextNoteTime);
+    const secondsPerBeat = (60 / bpm) * (4 / noteValue);
+
+    if (currentBeat === 0) playSound(accentBuffer, nextNoteTime);
     else playSound(beatBuffer, nextNoteTime);
 
     highlightBall(currentBeat);
@@ -76,20 +77,20 @@ function scheduler() {
     }
 }
 
+let isPlaying = false;
+
 async function startMetronome() {
     await initSounds();
     stopMetronome();
+
     bpm = parseInt(bpmInput.value) || 120;
     beats = parseInt(beatsInput.value) || 4;
-    noteValue = parseInt(noteValueInput.value) || 4;
 
     bpm = Math.min(Math.max(bpm, 1), 1000);
     beats = Math.min(Math.max(beats, 1), 32);
-    noteValue = Math.min(Math.max(noteValue, 1), 32);
 
     bpmInput.value = bpm;
     beatsInput.value = beats;
-    noteValueInput.value = noteValue;
 
     currentBeat = 0;
     renderBalls();
@@ -97,6 +98,7 @@ async function startMetronome() {
 
     nextNoteTime = audioContext.currentTime + 0.05;
     schedulerInterval = setInterval(scheduler, lookahead);
+
     isPlaying = true;
     startStopBtn.textContent = "Stop";
     updateStatus();
@@ -116,24 +118,39 @@ startStopBtn.addEventListener("click", async () => {
     else startMetronome();
 });
 
-[bpmInput, beatsInput, noteValueInput].forEach((input) => {
-    input.addEventListener("input", () => {
-        if (!input.value) return;
-        let val = parseInt(input.value);
-        if (isNaN(val)) return;
+// Note Value buttons
+noteButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        noteButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        noteValue = parseInt(btn.dataset.value);
+        updateStatus();
+    });
+});
 
-        const min = parseInt(input.min);
-        const max = parseInt(input.max);
+// Increment/Decrement buttons
+document.querySelectorAll(".inc, .dec").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const target = document.getElementById(btn.dataset.target);
+        const step = parseInt(btn.dataset.step);
+        let val = parseInt(target.value) || 0;
+        val += btn.classList.contains("inc") ? step : -step;
+
+        const min = parseInt(target.min);
+        const max = parseInt(target.max);
         if (val < min) val = min;
         if (val > max) val = max;
-        input.value = val;
 
-        bpm = parseInt(bpmInput.value) || bpm;
-        beats = parseInt(beatsInput.value) || beats;
-        noteValue = parseInt(noteValueInput.value) || noteValue;
+        target.value = val;
+
+        if (target.id === "bpm") bpm = val;
+        if (target.id === "beats") beats = val;
 
         renderBalls();
         updateStatus();
+
+        currentBeat = 0;
+        nextNoteTime = audioContext.currentTime + 0.05;
     });
 });
 
