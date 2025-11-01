@@ -1,3 +1,7 @@
+let audioContext = null;
+let accentBuffer = null;
+let beatBuffer = null;
+
 let currentBeat = 0;
 let isPlaying = false;
 let timer;
@@ -12,10 +16,6 @@ const noteValueInput = document.getElementById("noteValue");
 const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
-
-// Audio элементы
-const accentAudio = new Audio("accent-sound.wav");
-const beatAudio = new Audio("beat-sound.ogg");
 
 // Обновление текста статуса
 function updateStatus() {
@@ -41,15 +41,34 @@ function highlightBall(index) {
     });
 }
 
-// Воспроизведение клика
+// Загрузка звуков в AudioBuffer
+async function loadSound(url) {
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    return audioContext.decodeAudioData(arrayBuffer);
+}
+
+// Инициализация звуков
+async function initSounds() {
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    accentBuffer = await loadSound("accent-sound.wav");
+    beatBuffer = await loadSound("beat-sound.ogg");
+}
+
+// Воспроизведение звука через AudioBufferSourceNode
+function playSound(buffer) {
+    if (!buffer || !audioContext) return;
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start();
+}
+
+// Один клик метронома
 function playClick() {
-    if (currentBeat === 0) {
-        accentAudio.currentTime = 0;
-        accentAudio.play();
-    } else {
-        beatAudio.currentTime = 0;
-        beatAudio.play();
-    }
+    if (currentBeat === 0) playSound(accentBuffer);
+    else playSound(beatBuffer);
 
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
@@ -71,7 +90,6 @@ function startMetronome() {
     beatsInput.value = beats;
     noteValueInput.value = noteValue;
 
-    // если текущее значение currentBeat больше нового количества долей — сбрасываем
     if (currentBeat >= beats) currentBeat = 0;
 
     renderBalls();
@@ -94,13 +112,14 @@ function stopMetronome() {
     updateStatus();
 }
 
-// Кнопка старт/стоп
-startStopBtn.addEventListener("click", () => {
+// Кнопка старт/стоп с гарантией iOS Web Audio
+startStopBtn.addEventListener("click", async () => {
+    if (!audioContext) await initSounds();
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
-// Динамическое обновление значений и шариков
+// Динамическое изменение значений
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
         if (!input.value) return; // пустое поле — не менять
