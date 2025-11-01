@@ -2,15 +2,10 @@ let audioContext;
 let accentBuffer, beatBuffer;
 let currentBeat = 0;
 let isPlaying = false;
+let timer;
 let bpm = 120;
 let beats = 4;
 let noteValue = 4;
-
-// Таймер планировщика
-let timerId;
-const scheduleAheadTime = 0.1; // секунды
-const lookahead = 25.0;        // миллисекунды
-let nextNoteTime = 0.0;
 
 const bpmInput = document.getElementById("bpm");
 const beatsInput = document.getElementById("beats");
@@ -19,7 +14,12 @@ const startStopBtn = document.getElementById("startStopBtn");
 const statusText = document.getElementById("statusText");
 const ballsContainer = document.getElementById("ballsContainer");
 
-// ---------------- Status и шарики ----------------
+// Создаём кнопку Enable Sound
+const enableSoundBtn = document.createElement("button");
+enableSoundBtn.textContent = "Enable Sound";
+enableSoundBtn.style.marginTop = "10px";
+startStopBtn.parentNode.insertBefore(enableSoundBtn, startStopBtn);
+
 function updateStatus() {
     statusText.textContent = isPlaying
         ? `Playing ${beats}/${noteValue} at ${bpm} BPM`
@@ -41,41 +41,40 @@ function highlightBall(index) {
     });
 }
 
-// ---------------- Звуки ----------------
 async function loadSound(url) {
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
     return audioContext.decodeAudioData(arrayBuffer);
 }
 
+// Инициализация звука (только после Enable Sound)
 async function initSounds() {
-    if (!audioContext)
+    if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
     accentBuffer = await loadSound("accent-sound.wav");
     beatBuffer = await loadSound("beat-sound.ogg");
+    // Возобновляем аудиоконтекст для iOS
+    if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+    }
 }
 
-// ---------------- Планировщик ----------------
-function scheduleClick(time) {
-    const buffer = (currentBeat === 0) ? accentBuffer : beatBuffer;
+function playSound(buffer) {
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
-    source.start(time);
+    source.start(0);
+}
+
+function playClick() {
+    if (currentBeat === 0) playSound(accentBuffer);
+    else playSound(beatBuffer);
 
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
 }
 
-function scheduler() {
-    while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
-        scheduleClick(nextNoteTime);
-        nextNoteTime += 60.0 / bpm;
-    }
-    timerId = setTimeout(scheduler, lookahead);
-}
-
-// ---------------- Метроном ----------------
 function startMetronome() {
     stopMetronome();
 
@@ -95,30 +94,38 @@ function startMetronome() {
     renderBalls();
     highlightBall(currentBeat);
 
-    nextNoteTime = audioContext.currentTime + 0.05; // небольшая пауза перед стартом
+    const interval = (60 / bpm) * 1000;
+    timer = setInterval(playClick, interval);
     isPlaying = true;
     startStopBtn.textContent = "Stop";
     updateStatus();
-
-    scheduler();
 }
 
 function stopMetronome() {
-    clearTimeout(timerId);
+    clearInterval(timer);
     isPlaying = false;
     startStopBtn.textContent = "Start";
     highlightBall(-1);
     updateStatus();
 }
 
-// ---------------- Toggle ----------------
-startStopBtn.addEventListener("click", async () => {
-    if (!audioContext) await initSounds();
+startStopBtn.addEventListener("click", () => {
+    if (!audioContext) {
+        alert("Please click 'Enable Sound' first to start the metronome.");
+        return;
+    }
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
-// ---------------- Input handlers ----------------
+enableSoundBtn.addEventListener("click", async () => {
+    enableSoundBtn.disabled = true;
+    enableSoundBtn.textContent = "Sound Enabled";
+    await initSounds();
+    alert("Sound is now enabled! You can start the metronome.");
+});
+
+// Обработчики для изменения BPM и Time Signature
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
         if (!input.value) return;
@@ -135,15 +142,11 @@ startStopBtn.addEventListener("click", async () => {
         beats = parseInt(beatsInput.value) || beats;
         noteValue = parseInt(noteValueInput.value) || noteValue;
 
-        renderBalls();
         updateStatus();
-        if (isPlaying) {
-            // перезапускаем планировщик с новым BPM / Time Signature
-            nextNoteTime = audioContext.currentTime + 0.05;
-        }
+        if (isPlaying) startMetronome();
+        else renderBalls();
     });
 });
 
-// ---------------- Инициализация ----------------
 renderBalls();
 updateStatus();
