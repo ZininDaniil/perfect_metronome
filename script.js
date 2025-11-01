@@ -41,7 +41,7 @@ function highlightBall(index) {
     });
 }
 
-// Воспроизведение звука
+// Воспроизведение клика
 function playClick() {
     if (currentBeat === 0) {
         accentAudio.currentTime = 0;
@@ -71,7 +71,9 @@ function startMetronome() {
     beatsInput.value = beats;
     noteValueInput.value = noteValue;
 
-    currentBeat = 0;
+    // если текущее значение currentBeat больше нового количества долей — сбрасываем
+    if (currentBeat >= beats) currentBeat = 0;
+
     renderBalls();
     highlightBall(currentBeat);
 
@@ -111,15 +113,28 @@ startStopBtn.addEventListener("click", () => {
         if (val > max) val = max;
         input.value = val;
 
+        const oldBpm = bpm;
+        const oldBeats = beats;
+
         bpm = parseInt(bpmInput.value) || bpm;
         beats = parseInt(beatsInput.value) || beats;
         noteValue = parseInt(noteValueInput.value) || noteValue;
 
         updateStatus();
 
-        // Перезапуск интервала для динамического изменения скорости
-        if (isPlaying) startMetronome();
-        else renderBalls();
+        // если поменялось количество долей — перерисовать шарики
+        if (beats !== oldBeats) {
+            renderBalls();
+            if (currentBeat >= beats) currentBeat = 0;
+            highlightBall(currentBeat);
+        }
+
+        // если BPM изменился — перезапустить интервал без обнуления currentBeat
+        if (isPlaying && bpm !== oldBpm) {
+            clearInterval(timer);
+            const interval = (60 / bpm) * 1000;
+            timer = setInterval(playClick, interval);
+        }
     });
 });
 
