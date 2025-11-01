@@ -84,8 +84,8 @@ async function startMetronome() {
     noteValue = parseInt(noteValueInput.value) || 4;
 
     bpm = Math.min(Math.max(bpm, 1), 1000);
-    beats = Math.min(Math.max(beats, 1), 64);
-    noteValue = Math.min(Math.max(noteValue, 1), 64);
+    beats = Math.min(Math.max(beats, 1), 32);
+    noteValue = Math.min(Math.max(noteValue, 1), 32);
 
     bpmInput.value = bpm;
     beatsInput.value = beats;
