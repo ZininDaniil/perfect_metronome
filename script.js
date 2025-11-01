@@ -1,7 +1,5 @@
-let audioContext = null;
-let accentBuffer = null;
-let beatBuffer = null;
-
+let audioContext;
+let accentBuffer, beatBuffer;
 let currentBeat = 0;
 let isPlaying = false;
 let timer;
@@ -9,7 +7,6 @@ let bpm = 120;
 let beats = 4;
 let noteValue = 4;
 
-// HTML элементы
 const bpmInput = document.getElementById("bpm");
 const beatsInput = document.getElementById("beats");
 const noteValueInput = document.getElementById("noteValue");
@@ -24,7 +21,7 @@ function updateStatus() {
         : "Stopped";
 }
 
-// Отрисовка шариков
+// Рендер шариков
 function renderBalls() {
     ballsContainer.innerHTML = "";
     for (let i = 0; i < beats; i++) {
@@ -34,16 +31,15 @@ function renderBalls() {
     }
 }
 
-// Подсветка текущего шара
+// Подсветка текущего удара
 function highlightBall(index) {
     document.querySelectorAll(".ball").forEach((b, i) => {
         b.classList.toggle("active", i === index);
     });
 }
 
-// Загрузка звуков в AudioBuffer
+// Загрузка звуков
 async function loadSound(url) {
-    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
     return audioContext.decodeAudioData(arrayBuffer);
@@ -51,30 +47,40 @@ async function loadSound(url) {
 
 // Инициализация звуков
 async function initSounds() {
-    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioContext)
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Для iOS: разблокировка контекста
+    if (audioContext.state === 'suspended') await audioContext.resume();
+
     accentBuffer = await loadSound("accent-sound.wav");
     beatBuffer = await loadSound("beat-sound.ogg");
+
+    // Короткий silent buffer, чтобы гарантировать звук на встроенных динамиках iOS
+    const silentBuffer = audioContext.createBuffer(1, 1, 22050);
+    const silentSource = audioContext.createBufferSource();
+    silentSource.buffer = silentBuffer;
+    silentSource.connect(audioContext.destination);
+    silentSource.start();
 }
 
-// Воспроизведение звука через AudioBufferSourceNode
+// Воспроизведение звука
 function playSound(buffer) {
-    if (!buffer || !audioContext) return;
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
     source.start();
 }
 
-// Один клик метронома
+// Метрономный клик
 function playClick() {
     if (currentBeat === 0) playSound(accentBuffer);
     else playSound(beatBuffer);
-
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
 }
 
-// Запуск метронома
+// Старт метронома
 function startMetronome() {
     stopMetronome();
 
@@ -90,20 +96,18 @@ function startMetronome() {
     beatsInput.value = beats;
     noteValueInput.value = noteValue;
 
-    if (currentBeat >= beats) currentBeat = 0;
-
+    currentBeat = 0;
     renderBalls();
     highlightBall(currentBeat);
 
     const interval = (60 / bpm) * 1000;
     timer = setInterval(playClick, interval);
-
     isPlaying = true;
     startStopBtn.textContent = "Stop";
     updateStatus();
 }
 
-// Остановка метронома
+// Стоп метронома
 function stopMetronome() {
     clearInterval(timer);
     isPlaying = false;
@@ -112,17 +116,19 @@ function stopMetronome() {
     updateStatus();
 }
 
-// Кнопка старт/стоп с гарантией iOS Web Audio
+// Переключение старт/стоп
 startStopBtn.addEventListener("click", async () => {
     if (!audioContext) await initSounds();
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
-// Динамическое изменение значений
+// Динамическое обновление при вводе значений
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
-        if (!input.value) return; // пустое поле — не менять
+        // Если поле пустое, не меняем звук
+        if (!input.value) return;
+
         let val = parseInt(input.value);
         if (isNaN(val)) return;
 
@@ -132,31 +138,16 @@ startStopBtn.addEventListener("click", async () => {
         if (val > max) val = max;
         input.value = val;
 
-        const oldBpm = bpm;
-        const oldBeats = beats;
-
         bpm = parseInt(bpmInput.value) || bpm;
         beats = parseInt(beatsInput.value) || beats;
         noteValue = parseInt(noteValueInput.value) || noteValue;
 
         updateStatus();
-
-        // если поменялось количество долей — перерисовать шарики
-        if (beats !== oldBeats) {
-            renderBalls();
-            if (currentBeat >= beats) currentBeat = 0;
-            highlightBall(currentBeat);
-        }
-
-        // если BPM изменился — перезапустить интервал без обнуления currentBeat
-        if (isPlaying && bpm !== oldBpm) {
-            clearInterval(timer);
-            const interval = (60 / bpm) * 1000;
-            timer = setInterval(playClick, interval);
-        }
+        if (isPlaying) startMetronome();
+        else renderBalls();
     });
 });
 
-// Начальная отрисовка
+// Первоначальный рендер
 renderBalls();
 updateStatus();
