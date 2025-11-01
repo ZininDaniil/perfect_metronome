@@ -41,15 +41,23 @@ async function loadSound(url) {
     return audioContext.decodeAudioData(arrayBuffer);
 }
 
-// ⚡ Инициализация звука только при клике пользователя
+// ⚡ Инициализация звука с "разогревом" для iPhone динамиков
 async function initSounds() {
-    if (!audioContext)
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // маленький пустой буфер для разблокировки встроенных динамиков на iOS
+    const unlockBuffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = unlockBuffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+
     accentBuffer = await loadSound("accent-sound.wav");
     beatBuffer = await loadSound("beat-sound.ogg");
 }
 
 function playSound(buffer) {
+    if (!audioContext) return; // дополнительная защита
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
@@ -59,15 +67,17 @@ function playSound(buffer) {
 function playClick() {
     if (currentBeat === 0) playSound(accentBuffer);
     else playSound(beatBuffer);
+
     highlightBall(currentBeat);
     currentBeat = (currentBeat + 1) % beats;
 }
 
 function startMetronome() {
     stopMetronome();
-    bpm = parseInt(bpmInput.value) || 120;
-    beats = parseInt(beatsInput.value) || 4;
-    noteValue = parseInt(noteValueInput.value) || 4;
+
+    bpm = parseInt(bpmInput.value) || bpm;
+    beats = parseInt(beatsInput.value) || beats;
+    noteValue = parseInt(noteValueInput.value) || noteValue;
 
     bpm = Math.min(Math.max(bpm, 1), 1000);
     beats = Math.min(Math.max(beats, 1), 12);
@@ -83,6 +93,7 @@ function startMetronome() {
 
     const interval = (60 / bpm) * 1000;
     timer = setInterval(playClick, interval);
+
     isPlaying = true;
     startStopBtn.textContent = "Stop";
     updateStatus();
@@ -96,16 +107,17 @@ function stopMetronome() {
     updateStatus();
 }
 
-// ⚡ Важное изменение для iOS: создаём AudioContext внутри события клика
+// ⚡ Клик по кнопке Start/Stop с инициализацией звуков для iOS
 startStopBtn.addEventListener("click", async () => {
     if (!audioContext) await initSounds();
     if (isPlaying) stopMetronome();
     else startMetronome();
 });
 
+// Динамическое обновление значений BPM и Time Signature
 [bpmInput, beatsInput, noteValueInput].forEach((input) => {
     input.addEventListener("input", () => {
-        if (!input.value) return;
+        if (!input.value) return; // если пустое, не меняем звук
         let val = parseInt(input.value);
         if (isNaN(val)) return;
 
@@ -120,6 +132,8 @@ startStopBtn.addEventListener("click", async () => {
         noteValue = parseInt(noteValueInput.value) || noteValue;
 
         updateStatus();
+
+        // перезапуск интервала для динамического изменения скорости
         if (isPlaying) startMetronome();
         else renderBalls();
     });
