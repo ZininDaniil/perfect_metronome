@@ -1,25 +1,27 @@
 body {
-    background-color: #f6f3ef;
+    background-color: #0e0e0f;
     font-family: "Inter", sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100vh;
     margin: 0;
+    color: #eaeaea;
 }
 
 .container {
-    background: #fff;
+    background: #181818;
     padding: 25px 35px;
     border-radius: 20px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
     text-align: center;
     width: 350px;
 }
 
 h1 {
-    color: #3b2f1e;
+    color: #ffffff;
     margin-bottom: 20px;
+    font-weight: 600;
 }
 
 .controls {
@@ -36,8 +38,8 @@ h1 {
 }
 
 label {
-    color: #6b4f2d;
-    font-weight: 600;
+    color: #a0a0a0;
+    font-weight: 500;
     width: 80px;
 }
 
@@ -50,10 +52,12 @@ label {
 
 input {
     width: 60px;
-    padding: 5px;
+    padding: 6px;
     text-align: center;
-    border: 1px solid #c9b89a;
+    border: 1px solid #333;
     border-radius: 6px;
+    background-color: #121212;
+    color: #eaeaea;
     font-size: 1em;
 }
 
@@ -68,15 +72,15 @@ input {
     font-size: 0.8em;
     padding: 3px 6px;
     border-radius: 5px;
-    border: 1px solid #c9b89a;
-    background-color: #e2d8c5;
-    color: #3b2f1e;
+    border: 1px solid #333;
+    background-color: #222;
+    color: #eaeaea;
     cursor: pointer;
     transition: 0.2s;
 }
 
 .vertical-buttons button:hover {
-    background-color: #d3c2a2;
+    background-color: #333;
 }
 
 /* Быстрые кнопки +5 +10 */
@@ -91,15 +95,15 @@ input {
     font-size: 0.8em;
     padding: 3px 6px;
     border-radius: 5px;
-    border: 1px solid #c9b89a;
-    background-color: #e2d8c5;
-    color: #3b2f1e;
+    border: 1px solid #333;
+    background-color: #222;
+    color: #eaeaea;
     cursor: pointer;
     transition: 0.2s;
 }
 
 .quick-buttons button:hover {
-    background-color: #d3c2a2;
+    background-color: #333;
 }
 
 /* Note Value buttons */
@@ -111,27 +115,28 @@ input {
 .note-btn {
     padding: 5px 10px;
     border-radius: 6px;
-    border: 1px solid #c9b89a;
-    background-color: #e2d8c5;
-    color: #3b2f1e;
+    border: 1px solid #333;
+    background-color: #222;
+    color: #eaeaea;
     cursor: pointer;
     font-size: 1em;
     transition: 0.2s;
 }
 
 .note-btn.active {
-    background-color: #6b4f2d;
-    color: white;
+    background-color: #4f46e5;
+    color: #fff;
+    border-color: #4f46e5;
 }
 
 .note-btn:hover {
-    background-color: #d3c2a2;
+    background-color: #333;
 }
 
 /* Start/Stop & Triplet buttons */
 button.start-stop-btn {
     margin-top: 10px;
-    background-color: #6b4f2d;
+    background-color: #4f46e5;
     color: white;
     border: none;
     border-radius: 10px;
@@ -142,17 +147,17 @@ button.start-stop-btn {
 }
 
 button.start-stop-btn.active {
-    background-color: #8b6536;
+    background-color: #6366f1;
 }
 
 button.start-stop-btn:hover {
-    background-color: #8b6536;
+    background-color: #6366f1;
 }
 
 .status {
     margin-bottom: 20px;
-    color: #6b4f2d;
-    font-weight: bold;
+    color: #a0a0a0;
+    font-weight: 500;
 }
 
 .balls-container {
@@ -164,12 +169,12 @@ button.start-stop-btn:hover {
 .ball {
     width: 22px;
     height: 22px;
-    background-color: #ddd;
+    background-color: #333;
     border-radius: 50%;
     transition: 0.15s ease;
 }
 
 .ball.active {
-    background-color: #6b4f2d;
+    background-color: #4f46e5;
     transform: scale(1.2);
 }
