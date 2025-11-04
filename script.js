@@ -49,8 +49,8 @@ async function loadSound(url) {
 async function initSounds() {
     if (!audioContext)
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (!accentBuffer) accentBuffer = await loadSound("accent-sound2.mp3");
-    if (!beatBuffer) beatBuffer = await loadSound("beat-sound2.wav");
+    if (!accentBuffer) accentBuffer = await loadSound("accent-sound.wav");
+    if (!beatBuffer) beatBuffer = await loadSound("beat-sound.ogg");
 }
 
 function playSound(buffer, time) {
